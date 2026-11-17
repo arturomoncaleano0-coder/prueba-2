@@ -1,0 +1,111 @@
+/* Modo "cara" (filtro DELIRIUM) y botón para voltear la cámara. */
+
+/* Contenedor del filtro: video de la cámara frontal + escena 3D encima. */
+#delirium-app {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    background: #000;
+    z-index: 1;
+    display: none;
+}
+
+#delirium-app.active {
+    display: block;
+}
+
+/* Video y ayudas 2D en espejo, como un espejo real */
+#delirium-app #video-renderer,
+#delirium-app #canvas-renderer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transform: scaleX(-1);
+}
+
+/* Botón: mismo dorado que "Iniciar"; por debajo de los modales (z-index 1050+). */
+#camera-flip-button {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 16px);
+    right: 16px;
+    z-index: 900;
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #171512;
+    background: linear-gradient(135deg, #e1c27e, #c9a45c, #ad8541);
+    border: 1px solid rgba(244, 234, 213, 0.55);
+    border-radius: 50%;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: transform 0.15s ease, opacity 0.2s ease;
+}
+
+#camera-flip-button[hidden] {
+    display: none;
+}
+
+#camera-flip-button:active {
+    transform: scale(0.92);
+}
+
+#camera-flip-button:focus-visible {
+    outline: 2px solid #f4ead5;
+    outline-offset: 3px;
+}
+
+#camera-flip-button:disabled {
+    cursor: wait;
+    opacity: 0.7;
+}
+
+#camera-flip-button svg {
+    display: block;
+}
+
+#camera-flip-button.busy svg {
+    animation: camera-flip-spin 0.9s linear infinite;
+}
+
+@keyframes camera-flip-spin {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #camera-flip-button.busy svg { animation: none; }
+}
+
+/* Mensaje breve de estado (cargando / error). */
+#flip-status {
+    position: fixed;
+    left: 50%;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 28px);
+    z-index: 900;
+    max-width: min(88vw, 360px);
+    padding: 10px 18px;
+    color: #f4ead5;
+    font-size: 14px;
+    line-height: 1.35;
+    text-align: center;
+    background: rgba(23, 21, 18, 0.88);
+    border: 1px solid rgba(201, 164, 92, 0.6);
+    border-radius: 999px;
+    opacity: 0;
+    transform: translate(-50%, 8px);
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+#flip-status.visible {
+    opacity: 1;
+    transform: translate(-50%, 0);
+}

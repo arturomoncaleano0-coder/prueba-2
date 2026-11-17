@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+	<title></title>
+	<meta charset="utf-8">
+	<meta name="generator" content="Three.js Editor">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<link rel="stylesheet" href="css/app.css">
+	<link rel="stylesheet" href="css/delirium.css">
+
+	<script type="importmap">
+	{
+		"imports": {
+			"three": "./js/three.compat.js",
+			"three/addons/": "./js/addons/",
+			"mindar-image-three": "https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-three.prod.js"
+		},
+		"scopes": {
+			"https://cdn.jsdelivr.net/npm/three@0.181.1/": {
+				"three": "https://cdn.jsdelivr.net/npm/three@0.181.1/build/three.module.js"
+			}
+		}
+	}
+	</script>
+
+	<script type="module">
+		import {GLTFLoader} from 'https://cdn.jsdelivr.net/npm/three@0.186.0/examples/jsm/loaders/GLTFLoader.js';
+		window.ThreeGLTFLoader = GLTFLoader;
+	</script>
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body ontouchstart="">
+	<style>
+		/* Identidad visual de los modales: negro, marfil y dorado */
+		:root {
+			--buchanan-gold: #c9a45c;
+			--buchanan-cream: #f4ead5;
+			--buchanan-dark: #171512;
+		}
+		.buchanan-modal .modal-content {
+			background: linear-gradient(145deg, #242019, #11100e);
+			color: var(--buchanan-cream);
+			border: 1px solid rgba(201,164,92,.8);
+			border-radius: 18px;
+			box-shadow: 0 18px 55px rgba(0,0,0,.45);
+			overflow: hidden;
+		}
+		.buchanan-modal .modal-header {
+			border-bottom: 1px solid rgba(201,164,92,.35);
+			padding: 1.25rem 1.4rem;
+		}
+		.buchanan-modal .modal-title {
+			color: var(--buchanan-gold);
+			font-family: Georgia, serif;
+			font-size: 1.35rem;
+			letter-spacing: .03em;
+		}
+		.buchanan-modal .modal-body {
+			padding: 1.4rem;
+			font-size: 1rem;
+			line-height: 1.7;
+		}
+		.buchanan-modal .btn-close {
+			filter: invert(83%) sepia(24%) saturate(560%) hue-rotate(2deg);
+			opacity: .9;
+		}
+		.buchanan-modal .modal-footer {
+			border-top: 1px solid rgba(201,164,92,.25);
+			padding: .85rem 1.4rem;
+		}
+		.buchanan-modal .btn-modal-close {
+			background: var(--buchanan-gold);
+			color: #171512;
+			border: 1px solid var(--buchanan-gold);
+			border-radius: 999px;
+			padding: .5rem 1.25rem;
+			font-weight: 700;
+			transition: .2s ease;
+		}
+		.buchanan-modal .btn-modal-close:hover {
+			background: var(--buchanan-cream);
+			border-color: var(--buchanan-cream);
+			transform: translateY(-1px);
+		}
+		.modal-backdrop.show { opacity: .78; }
+	</style>
+
+	<div id="ar-container"></div>
+
+	<!-- Modo cara (filtro DELIRIUM): se muestra al voltear la cámara -->
+	<div id="delirium-app">
+		<video id="video-renderer"></video>
+		<canvas id="canvas-renderer"></canvas>
+	</div>
+
+	<div class="log" id="log">asdasdsa</div>
+
+	<div id="overlay">
+		<button id="start-button">Iniciar</button>
+		<div id="progress-container">
+			<div id="progress-bar-track">
+				<div id="progress-bar-fill"></div>
+			</div>
+			<div id="progress-label">Cargando... 0%</div>
+		</div>
+	</div>
+
+	<!-- Voltear cámara: AR con cámara trasera <-> filtro facial con cámara frontal -->
+	<button id="camera-flip-button" type="button" hidden aria-label="Voltear cámara" title="Voltear cámara">
+		<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2"
+			stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+			<path d="M11 19H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h5" />
+			<path d="M13 5h7a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-5" />
+			<circle cx="12" cy="12" r="3" />
+			<path d="m18 22-3-3 3-3" />
+			<path d="m6 2 3 3-3 3" />
+		</svg>
+	</button>
+	<div id="flip-status" role="status" aria-live="polite"></div>
+
+
+	<!-- Modal: Historia -->
+	<div class="modal fade buchanan-modal" id="HISTORIA" tabindex="-1"
+		aria-labelledby="tituloHistoria" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="tituloHistoria">Historia de Buchanan's</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+				</div>
+				<div class="modal-body">
+					<p>
+						Buchanan’s es una marca de whisky escocés fundada en 1884 por James Buchanan,
+						reconocida por su tradición, calidad y presencia en el mercado latinoamericano, especialmente en
+						Colombia. Se elabora a partir de una mezcla de whiskies escoceses y se caracteriza por sus notas
+						de miel, frutas, vainilla y madera, con un sabor suave y un aroma distintivo.
+					</p>
+					<p>
+						Entre sus referencias más conocidas se encuentran Buchanan’s Deluxe 12 años,
+						Buchanan’s Master y Buchanan’s Red Seal. Su imagen de marca suele asociarse con la elegancia,
+						la celebración y el consumo social.
+					</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-modal-close" data-bs-dismiss="modal">Cerrar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal: Información -->
+	<div class="modal fade buchanan-modal" id="INFO" tabindex="-1"
+		aria-labelledby="tituloInfo" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="tituloInfo">Variedades de Buchanan's</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+				</div>
+				<div class="modal-body">
+					<p>
+						Buchanan’s cuenta con diferentes variedades de whisky, entre las que destacan
+						Buchanan’s Deluxe 12 años, Buchanan’s Master y Buchanan’s Red Seal. Cada una presenta
+						características particulares en su aroma, sabor y proceso de elaboración.
+					</p>
+					<p>
+						La marca también se ha vinculado con la celebración, la amistad y la conexión cultural,
+						promoviendo experiencias que reúnen a las personas alrededor de momentos especiales.
+					</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-modal-close" data-bs-dismiss="modal">Cerrar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Modal: Ingredientes -->
+	<div class="modal fade buchanan-modal" id="INGREDIENTES" tabindex="-1"
+		aria-labelledby="tituloIngredientes" aria-hidden="true">
+		<div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="tituloIngredientes">Ingredientes y elaboración</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+				</div>
+				<div class="modal-body">
+					<p>
+						Buchanan’s se elabora a partir de una combinación de whiskies escoceses de malta y de grano,
+						cuyos ingredientes principales son cereales, agua y levadura. Estos elementos pasan por procesos
+						de fermentación y destilación.
+					</p>
+					<p>
+						Posteriormente, el whisky madura en barricas de roble, donde desarrolla su aroma, color y sabor
+						característicos, con notas que pueden incluir vainilla, frutas, caramelo y especias, según la variedad.
+					</p>
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-modal-close" data-bs-dismiss="modal">Cerrar</button>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+
+
+
+
+
+	<script type="module">
+
+		import * as THREE from './js/three.module.js';
+		import {APP} from './js/app.js';
+		import {MindARController} from './js/mindar/mindar_controller.js';
+		import {setupCameraFlip} from './js/camera_flip.js';
+
+		window.THREE = THREE; // Used by APP Scripts.
+
+		const log = document.getElementById('log');
+		const overlay = document.getElementById('overlay');
+		const startButton = document.getElementById('start-button');
+		const arContainer = document.getElementById('ar-container');
+		const progressContainer = document.getElementById('progress-container');
+		const progressFill = document.getElementById('progress-bar-fill');
+		const progressLabel = document.getElementById('progress-label');
+
+		const debugMode = new URLSearchParams(location.search).get('debug') === '1';
+
+		let player = null;
+		let mindarController = null;
+		let loaded = false;
+		let loadPromise = null;
+
+		// Botón para voltear la cámara: AR (trasera) <-> filtro DELIRIUM (frontal).
+		const cameraFlip = setupCameraFlip({
+			button: document.getElementById('camera-flip-button'),
+			arContainer,
+			getArController: () => mindarController,
+			debug: debugMode,
+		});
+
+		function setProgress(percent, text) {
+			progressFill.style.width = `${percent}%`;
+			progressLabel.textContent = `${text} ${percent}%`;
+		}
+
+		async function loadEverything() {
+
+			if (loadPromise) return loadPromise;
+
+			loadPromise = (async () => {
+
+				setProgress(0, 'Cargando escena...');
+
+				// Descarga app.json con progreso real (0% - 25%)
+				const text = await new Promise((resolve, reject) => {
+					const loader = new THREE.FileLoader();
+					loader.load(
+						'app.json',
+						(t) => resolve(t),
+						(e) => {
+							if (e.lengthComputable) {
+								const p = Math.round((e.loaded / e.total) * 25);
+								setProgress(p, 'Cargando escena...');
+							}
+						},
+						(err) => reject(new Error(err.statusText || 'No se pudo descargar el json'))
+					);
+				});
+
+				player = new APP.Player({alpha: true});
+				await player.load(JSON.parse(text));
+				player.setSize(window.innerWidth, window.innerHeight);
+				player.play();
+				setProgress(55, 'Escena lista...');
+
+				document.body.appendChild(player.dom);
+
+				window.addEventListener('resize', function () {
+					player.setSize(window.innerWidth, window.innerHeight);
+				});
+
+				window.player = player;
+
+				setProgress(85, 'Preparando AR...');
+				log.textContent = 'initializing...';
+
+				await new Promise((resolve) => setTimeout(resolve, 10));
+
+				setProgress(100, 'Listo');
+				loaded = true;
+
+				console.log(window.player);
+
+			})().catch((e) => {
+				loaded = false;
+				loadPromise = null; // permite reintentar al pulsar el botón
+				throw e;
+			});
+
+			return loadPromise;
+		}
+
+		// Los navegadores móviles solo dejan reproducir un <video> con sonido si fue "activado"
+		// por un toque del usuario, y tampoco lo descargan hasta que se reproduce. Por eso,
+		// con el toque de Iniciar se arranca y se pausa al instante (sin volumen): así,
+		// cuando se detecte el target, el video ya está listo y arranca sin demora.
+		function primeVideos() {
+			for (const asset of player?.assets?.videos ?? []) {
+				const video = asset.video;
+				if (video._primed) continue;
+				video._primed = true;
+
+				const volume = video.volume;
+				video.volume = 0;
+				const restore = () => { video.volume = volume; };
+
+				const playing = video.play();
+				if (playing && playing.then) {
+					playing.then(() => {
+						video.pause();
+						video.currentTime = 0;
+						restore();
+					}).catch(() => {
+						restore();
+						video._primed = false; // se reintentará en el siguiente toque
+					});
+				}
+			}
+		}
+
+		// Al darle al botón start se inicia la cámara (requiere gesto del usuario).
+		startButton.addEventListener('click', async () => {
+
+			progressContainer.style.display = 'flex';
+
+			primeVideos(); // dentro del gesto, antes de cualquier espera
+
+			try {
+				await loadEverything();
+				if (!loaded) return;
+
+				primeVideos(); // por si la escena terminó de cargar justo después del toque
+
+				setProgress(90, 'Iniciando cámara...');
+
+				// La cámara se inicia aquí, dentro del gesto del usuario.
+				mindarController = new MindARController(arContainer, player, debugMode);
+				window.mindarController = mindarController;
+
+				await mindarController.start();
+
+				// El player sigue funcionando (scripts/audio) pero su canvas ya no se usa.
+				if (player?.dom) player.dom.style.display = 'none';
+
+				overlay.classList.add('hidden');
+				cameraFlip.show();
+				setTimeout(() => overlay.remove(), 400);
+			} catch (e) {
+				console.error('Error durante la carga:', e);
+				startButton.textContent = 'Reintentar';
+				setProgress(0, 'Error al iniciar');
+			}
+
+		});
+
+		// Todo se carga automáticamente al abrir la página.
+		loadEverything().catch((e) => {
+			console.error('Error durante la carga automática:', e.message);
+			progressContainer.style.display = 'flex';
+			setProgress(0, 'Error al cargar');
+			startButton.textContent = 'Reintentar';
+		});
+
+	</script>
+	<!-- Bootstrap JS es necesario para que funcionen Modal, backdrop y botones de cierre -->
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
+	<script>
+		// Estas funciones son globales porque los scripts de los objetos 3D las invocan.
+		function openBootstrapModal(id) {
+			const modalElement = document.getElementById(id);
+			if (!modalElement || !window.bootstrap) {
+				console.error('No se encontró el modal o Bootstrap no se ha cargado:', id);
+				return;
+			}
+			bootstrap.Modal.getOrCreateInstance(modalElement).show();
+		}
+
+		function showInfo() {
+			openBootstrapModal('HISTORIA');
+		}
+
+		function showInfo2() {
+			openBootstrapModal('INFO');
+		}
+
+		function showInfo3() {
+			openBootstrapModal('INGREDIENTES');
+		}
+	</script>
+</body>
+
+</html>
