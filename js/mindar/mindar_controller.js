@@ -55,9 +55,14 @@ class MindARController {
             // cuando el celular está casi quieto (default de MindAR: 0.001). Si notas que el
             // contenido "se arrastra" al mover rápido, sube filterBeta; si aún tiembla, baja
             // filterMinCF (p. ej. 0.00005).
-            filterMinCF: 0.0001,
+            // OJO: con filterMinCF muy bajo (0.0001) el filtro tarda >1 s en converger:
+            // si la primera pose detectada es imprecisa, el contenido aparece lejos del
+            // marcador y se va "arrastrando" hacia él. Por eso se usa un valor más alto
+            // y además se descartan más frames de calentamiento y se hace "snap" (ver
+            // installSnapGuard).
+            filterMinCF: 0.0002,
             filterBeta: 1000,
-            warmupTolerance: 5,
+            warmupTolerance: 8,
             missTolerance: 5,
             uiLoading: 'no',
             uiScanning: 'no',
@@ -126,6 +131,8 @@ class MindARController {
             throw new Error(`No se pudo iniciar la cámara AR${detail}`);
         }
 
+        this.installSnapGuard();
+
         renderer.setAnimationLoop(() => {
             this.dispatch('update', {});
             renderer.render(scene, camera);
@@ -133,6 +140,29 @@ class MindARController {
 
         this.started = true;
         this.dispatch('start', {});
+    }
+
+    // Evita que el suavizado "arrastre" el contenido desde una pose vieja o imprecisa:
+    // si la pose cruda salta más de SNAP_DISTANCE respecto a la última filtrada
+    // (el marcador reapareció en otro sitio, o la primera detección era mala),
+    // se reinicia el filtro y el contenido salta directo a la pose correcta.
+    installSnapGuard() {
+        const SNAP_DISTANCE = 0.3; // en unidades de MindAR (1 = ancho del marcador)
+        const states = this.mindar?.controller?.trackingStates ?? [];
+        for (const state of states) {
+            const filter = state.filter;
+            if (!filter || filter.__snapGuard) continue;
+            const original = filter.filter.bind(filter);
+            filter.filter = (t, x) => {
+                const prev = filter.initialized ? filter.xPrev : null;
+                if (prev) {
+                    const dx = x[12] - prev[12], dy = x[13] - prev[13], dz = x[14] - prev[14];
+                    if (Math.hypot(dx, dy, dz) > SNAP_DISTANCE) filter.reset();
+                }
+                return original(t, x);
+            };
+            filter.__snapGuard = true;
+        }
     }
 
     stop() {
